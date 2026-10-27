@@ -6,7 +6,9 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
+from pyskyline.export import to_json
 from pyskyline.metrics.file import analyze_file
+from pyskyline.project import analyze_project
 
 app = typer.Typer(
     help="Turn a Python codebase into a 3D city.",
@@ -76,6 +78,69 @@ def inspect(
             _complexity_cell(function.complexity),
         )
     console.print(table)
+
+
+@app.command()
+def analyze(
+    path: Annotated[
+        Path,
+        typer.Argument(exists=True, file_okay=False, help="Project directory to analyze."),
+    ],
+    output: Annotated[
+        Path,
+        typer.Option("--output", "-o", help="Where to write the city JSON."),
+    ] = Path("city.json"),
+    history: Annotated[
+        bool,
+        typer.Option(help="Read change history from git."),
+    ] = True,
+    workers: Annotated[
+        int | None,
+        typer.Option(min=1, help="Worker processes. Default: automatic."),
+    ] = None,
+) -> None:
+    """Analyze every Python file in a project and write the city JSON."""
+    console = Console()
+    report = analyze_project(path, with_history=history, workers=workers)
+    output.write_text(to_json(report), encoding="utf-8")
+
+    files = report.files
+    failed = [file for file in files if file.metrics.error is not None]
+    code_lines = sum(file.metrics.lines.code for file in files)
+    functions = sum(len(file.metrics.functions) for file in files)
+    console.print(
+        f"[bold]{report.name}[/bold]: {len(files)} files, {code_lines} lines of code, "
+        f"{functions} functions"
+    )
+    if failed:
+        console.print(f"[yellow]{len(failed)} files could not be parsed[/yellow]")
+    if not report.has_history and history:
+        console.print("[dim]no git history found, hotspots are not computed[/dim]")
+
+    ranked = sorted(
+        files,
+        key=lambda file: (file.hotspot, file.metrics.total_complexity),
+        reverse=True,
+    )[:10]
+    if ranked:
+        table = Table(
+            title="hotspots" if report.has_history else "most complex files",
+            show_edge=False,
+            header_style="bold",
+        )
+        table.add_column("file")
+        table.add_column("complexity", justify="right")
+        table.add_column("commits", justify="right")
+        table.add_column("hotspot", justify="right")
+        for file in ranked:
+            table.add_row(
+                file.path,
+                str(file.metrics.total_complexity),
+                str(file.history.commits) if file.history else "-",
+                f"{file.hotspot:.2f}",
+            )
+        console.print(table)
+    console.print(f"written to {output}")
 
 
 def _complexity_cell(complexity: int) -> str:

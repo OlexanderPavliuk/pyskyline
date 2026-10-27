@@ -7,10 +7,11 @@ Turn a Python codebase into a 3D city.
 - Packages form districts; imports are bridges between buildings.
 - Hotspots, files that are both complex and changed often, stand out.
 
-> Work in progress. Right now the CLI measures a single file:
+> Work in progress. The analyzer works; the 3D viewer is next.
 >
 > ```bash
-> pyskyline inspect path/to/module.py
+> pyskyline analyze path/to/project -o city.json   # whole project to JSON
+> pyskyline inspect path/to/module.py              # one file as a table
 > ```
 
 ## Metrics
