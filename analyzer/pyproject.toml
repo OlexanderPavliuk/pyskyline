@@ -1,0 +1,50 @@
+[project]
+name = "pyskyline"
+version = "0.1.0"
+description = "Turn a Python codebase into a 3D city: files become buildings, complexity becomes color."
+readme = "README.md"
+license = "MIT"
+authors = [
+    { name = "Olexander Pavliuk", email = "147721238+OlexanderPavliuk@users.noreply.github.com" }
+]
+requires-python = ">=3.13"
+dependencies = [
+    "typer>=0.27.3",
+]
+
+[project.scripts]
+pyskyline = "pyskyline.cli:app"
+
+[build-system]
+requires = ["uv_build>=0.12.16,<0.13.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "mypy>=2.4.0",
+    "pytest>=9.1.1",
+    "ruff>=0.17.3",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+
+[tool.ruff.lint]
+select = [
+    "E", "W",   # pycodestyle
+    "F",        # pyflakes
+    "I",        # import sorting
+    "B",        # bugbear: likely bugs
+    "UP",       # pyupgrade: modern syntax
+    "SIM",      # simplifications
+    "RUF",      # ruff-specific
+]
+
+[tool.mypy]
+strict = true
+files = ["src", "tests"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = ["--strict-markers"]
