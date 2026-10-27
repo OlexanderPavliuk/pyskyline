@@ -142,7 +142,7 @@ export class CityScene {
     const direction = this.camera.position.clone().sub(this.controls.target).normalize();
     // Far enough to see the whole building plus some of its neighborhood.
     const extent = Math.max(size.x, size.y, size.z);
-    const distance = extent * 2.4 + (this.layout?.size ?? 100) * 0.08;
+    const distance = extent * 3.2 + (this.layout?.size ?? 100) * 0.15;
     this.flight = {
       start: performance.now(),
       fromPosition: this.camera.position.clone(),

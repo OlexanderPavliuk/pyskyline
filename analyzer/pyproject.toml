@@ -8,9 +8,23 @@ authors = [
     { name = "Olexander Pavliuk", email = "147721238+OlexanderPavliuk@users.noreply.github.com" }
 ]
 requires-python = ">=3.13"
+keywords = ["code-quality", "cyclomatic-complexity", "visualization", "static-analysis", "git"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Software Development :: Quality Assurance",
+    "Typing :: Typed",
+]
 dependencies = [
     "typer>=0.27.3",
 ]
+
+[project.urls]
+Homepage = "https://github.com/OlexanderPavliuk/pyskyline"
+Demo = "https://olexanderpavliuk.github.io/pyskyline/"
 
 [project.scripts]
 pyskyline = "pyskyline.cli:app"

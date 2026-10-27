@@ -27,11 +27,25 @@ const toast = $<HTMLDivElement>("toast");
 const dropOverlay = $<HTMLDivElement>("drop-overlay");
 
 const scene = new CityScene(stage);
-const view = new CityView(scene, {
-  panel: $("panel"),
-  tooltip: $("tooltip"),
-  legend: $("legend"),
-});
+const view = new CityView(
+  scene,
+  { panel: $("panel"), tooltip: $("tooltip"), legend: $("legend") },
+  (path) => setUrlParam("file", path),
+);
+
+/** The URL mirrors city, color and selection, so any view can be shared as a link. */
+function setUrlParam(name: string, value: string | null): void {
+  const url = new URL(window.location.href);
+  if (value === null) url.searchParams.delete(name);
+  else url.searchParams.set(name, value);
+  window.history.replaceState(null, "", url);
+}
+
+function applyMode(mode: ColorMode): void {
+  view.setMode(mode);
+  setUrlParam("color", mode === "complexity" ? null : mode);
+  updateControls();
+}
 
 $<HTMLDivElement>("legend-bar").style.background = rampGradient();
 
@@ -42,15 +56,14 @@ for (const [key, { label }] of Object.entries(COLOR_MODES)) {
   button.textContent = label;
   button.dataset.mode = key;
   button.setAttribute("role", "radio");
-  button.addEventListener("click", () => {
-    view.setMode(key as ColorMode);
-    updateControls();
-  });
+  button.addEventListener("click", () => applyMode(key as ColorMode));
   modeButtons.append(button);
 }
 
 function showCity(data: CityData): void {
   view.show(data);
+  setUrlParam("file", null);
+  if (view.mode === "complexity") setUrlParam("color", null);
   pathList.replaceChildren(...view.paths.map((path) => new Option(path)));
   search.value = "";
   updateControls();
@@ -81,9 +94,7 @@ async function loadBundled(entry: CityEntry): Promise<void> {
     const response = await fetch(`${import.meta.env.BASE_URL}cities/${entry.file}`);
     if (!response.ok) throw new Error(`Could not load ${entry.file} (${response.status}).`);
     showCity(parseCity(await response.text()));
-    const url = new URL(window.location.href);
-    url.searchParams.set("city", entry.name);
-    window.history.replaceState(null, "", url);
+    setUrlParam("city", entry.name);
   } catch (error) {
     showError(error instanceof Error ? error.message : String(error));
   }
@@ -93,6 +104,7 @@ async function loadFile(file: File): Promise<void> {
   try {
     showCity(parseCity(await file.text()));
     select.value = "";
+    setUrlParam("city", null);
   } catch (error) {
     showError(error instanceof Error ? error.message : String(error));
   }
@@ -115,12 +127,17 @@ async function start(): Promise<void> {
     const entry = entries.find((e) => e.name === select.value);
     if (entry) void loadBundled(entry);
   });
-  const wanted = new URLSearchParams(window.location.search).get("city");
-  const first = entries.find((e) => e.name === wanted) ?? entries[0];
-  if (first) {
-    select.value = first.name;
-    await loadBundled(first);
+  const params = new URLSearchParams(window.location.search);
+  const wantedColor = params.get("color");
+  const wantedFile = params.get("file");
+  const first = entries.find((e) => e.name === params.get("city")) ?? entries[0];
+  if (!first) return;
+  select.value = first.name;
+  await loadBundled(first);
+  if (wantedColor && wantedColor in COLOR_MODES && view.city?.hasHistory) {
+    applyMode(wantedColor as ColorMode);
   }
+  if (wantedFile) view.selectPath(wantedFile, true);
 }
 
 // Pointer: hover shows a tooltip, a click (not a drag) selects.

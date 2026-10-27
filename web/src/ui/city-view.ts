@@ -32,6 +32,7 @@ export class CityView {
   constructor(
     private readonly scene: CityScene,
     private readonly elements: ViewElements,
+    private readonly onSelectionChange: (path: string | null) => void = () => {},
   ) {}
 
   show(data: CityData): void {
@@ -79,6 +80,7 @@ export class CityView {
   select(index: number | null, fly = false): void {
     this.selected = index;
     const building = index === null ? undefined : this.layout?.buildings[index];
+    this.onSelectionChange(building?.file.path ?? null);
     if (index === null || !building) {
       this.scene.clearBridges();
       this.closePanel();

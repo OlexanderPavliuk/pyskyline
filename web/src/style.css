@@ -21,7 +21,7 @@
   }
 
   .mode-button {
-    @apply rounded-md border border-line px-2 py-1.5 text-xs text-mute transition-colors hover:text-white disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:text-mute;
+    @apply rounded-md border border-line px-2 py-1.5 text-xs text-mute hover:text-white disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:text-mute;
   }
 
   .mode-button[aria-checked="true"] {
