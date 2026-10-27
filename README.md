@@ -7,7 +7,20 @@ Turn a Python codebase into a 3D city.
 - Packages form districts; imports are bridges between buildings.
 - Hotspots, files that are both complex and changed often, stand out.
 
-> Work in progress.
+> Work in progress. Right now the CLI measures a single file:
+>
+> ```bash
+> pyskyline inspect path/to/module.py
+> ```
+
+## Metrics
+
+- **Lines**: every physical line is code, comment or blank. A line with code and a
+  trailing comment is code; lines inside multi-line strings, docstrings included, are code.
+- **Cyclomatic complexity** (McCabe): each block starts at 1 and gains 1 for every
+  `if`/`elif`, ternary, `for`/`while`, `except`, non-default `match` case, comprehension
+  `for`/`if`, and extra `and`/`or` operand. The module and each function are separate
+  blocks; nested functions do not add to their parent.
 
 ## Layout
 
