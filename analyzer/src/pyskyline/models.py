@@ -12,6 +12,17 @@ class LineCounts:
 
 
 @dataclass(frozen=True, slots=True)
+class FileHistory:
+    """What git remembers about one file."""
+
+    commits: int
+    # Lines added plus lines deleted, summed over all commits.
+    lines_changed: int
+    # Unix timestamp of the newest commit that touched the file.
+    last_changed: int
+
+
+@dataclass(frozen=True, slots=True)
 class FunctionMetrics:
     name: str
     # Follows Python's __qualname__: "Class.method", "outer.<locals>.inner".
