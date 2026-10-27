@@ -46,6 +46,13 @@ def test_analyze_writes_city_json(tmp_path: Path) -> None:
     assert json.loads(output.read_text(encoding="utf-8"))["name"] == "demo"
 
 
+def test_analyze_rejects_missing_directory(tmp_path: Path) -> None:
+    result = runner.invoke(app, ["analyze", str(tmp_path / "missing")])
+
+    assert result.exit_code == 1
+    assert "is not a directory" in result.output
+
+
 def test_inspect_fails_on_syntax_error(tmp_path: Path) -> None:
     path = tmp_path / "broken.py"
     path.write_text("def broken(:\n")

@@ -9,6 +9,7 @@ from rich.table import Table
 from pyskyline.export import to_json
 from pyskyline.metrics.file import analyze_file
 from pyskyline.project import analyze_project
+from pyskyline.remote import CloneError, cloned, is_remote
 
 app = typer.Typer(
     help="Turn a Python codebase into a 3D city.",
@@ -82,9 +83,9 @@ def inspect(
 
 @app.command()
 def analyze(
-    path: Annotated[
-        Path,
-        typer.Argument(exists=True, file_okay=False, help="Project directory to analyze."),
+    source: Annotated[
+        str,
+        typer.Argument(help="Project directory, or a git URL to clone and analyze."),
     ],
     output: Annotated[
         Path,
@@ -94,6 +95,10 @@ def analyze(
         bool,
         typer.Option(help="Read change history from git."),
     ] = True,
+    depth: Annotated[
+        int | None,
+        typer.Option(min=1, help="For URLs: clone only the latest N commits."),
+    ] = None,
     workers: Annotated[
         int | None,
         typer.Option(min=1, help="Worker processes. Default: automatic."),
@@ -101,7 +106,20 @@ def analyze(
 ) -> None:
     """Analyze every Python file in a project and write the city JSON."""
     console = Console()
-    report = analyze_project(path, with_history=history, workers=workers)
+    if is_remote(source):
+        console.print(f"cloning {source}")
+        try:
+            with cloned(source, depth=depth) as checkout:
+                report = analyze_project(checkout, with_history=history, workers=workers)
+        except CloneError as error:
+            console.print(f"[red]clone failed: {error}[/red]")
+            raise typer.Exit(code=1) from error
+    else:
+        path = Path(source)
+        if not path.is_dir():
+            console.print(f"[red]{source} is not a directory[/red]")
+            raise typer.Exit(code=1)
+        report = analyze_project(path, with_history=history, workers=workers)
     output.write_text(to_json(report), encoding="utf-8")
 
     files = report.files

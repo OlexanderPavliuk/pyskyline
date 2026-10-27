@@ -15,7 +15,7 @@ export const COLOR_MODES: Record<ColorMode, { label: string; legend: string }> =
   },
   hotspot: {
     label: "Hotspots",
-    legend: "complex and frequently changed at once",
+    legend: "complex and frequently changed at once, relative to the worst file",
   },
 };
 
@@ -37,22 +37,36 @@ export function ramp(t: number, target: Color = new Color()): Color {
   return target.copy(MID).lerp(ACCENT, (clamped - MID_STOP) / (1 - MID_STOP));
 }
 
-export function metricShare(file: FileData, mode: ColorMode, maxCommits: number): number {
+/** City-wide maxima for the relative color modes. */
+export interface ColorScale {
+  maxCommits: number;
+  maxHotspot: number;
+}
+
+export function colorScale(files: readonly FileData[]): ColorScale {
+  return {
+    maxCommits: Math.max(0, ...files.map((f) => f.history?.commits ?? 0)),
+    maxHotspot: Math.max(0, ...files.map((f) => f.hotspot)),
+  };
+}
+
+export function metricShare(file: FileData, mode: ColorMode, scale: ColorScale): number {
   switch (mode) {
     case "complexity":
       return (file.complexity.max - 1) / (COMPLEXITY_CEILING - 1);
     case "churn":
-      return maxCommits > 0 ? (file.history?.commits ?? 0) / maxCommits : 0;
+      return scale.maxCommits > 0 ? (file.history?.commits ?? 0) / scale.maxCommits : 0;
     case "hotspot":
-      return file.hotspot;
+      // The worst file in the city always gets the full accent.
+      return scale.maxHotspot > 0 ? file.hotspot / scale.maxHotspot : 0;
   }
 }
 
-export function fileColor(file: FileData, mode: ColorMode, maxCommits: number): Color {
+export function fileColor(file: FileData, mode: ColorMode, scale: ColorScale): Color {
   if (file.error !== null) {
     return BROKEN.clone();
   }
-  return ramp(metricShare(file, mode, maxCommits));
+  return ramp(metricShare(file, mode, scale));
 }
 
 /** CSS gradient matching ramp(), for the legend. */

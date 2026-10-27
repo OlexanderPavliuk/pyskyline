@@ -1,1 +1,6 @@
-[{ "file": "pyskyline.json", "name": "pyskyline", "note": "this project" }]
+[
+  { "file": "flask.json", "name": "flask", "note": "web framework, 83 files" },
+  { "file": "requests.json", "name": "requests", "note": "HTTP library, 37 files" },
+  { "file": "fastapi.json", "name": "fastapi", "note": "API framework, 1219 files" },
+  { "file": "pyskyline.json", "name": "pyskyline", "note": "this project" }
+]

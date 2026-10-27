@@ -4,7 +4,7 @@ import { Color } from "three";
 
 import { type CityLayout, layoutCity } from "../layout/city";
 import type { CityScene } from "../scene/city-scene";
-import { type ColorMode, fileColor } from "../scene/colors";
+import { type ColorMode, colorScale, fileColor } from "../scene/colors";
 import type { CityData, FileData } from "../types";
 import { renderPanel } from "./panel";
 
@@ -131,7 +131,7 @@ export class CityView {
   private colors(): Color[] {
     const layout = this.layout;
     if (!layout) return [];
-    const maxCommits = Math.max(0, ...layout.buildings.map((b) => b.file.history?.commits ?? 0));
+    const scale = colorScale(layout.buildings.map((b) => b.file));
     const related =
       this.selected === null
         ? null
@@ -143,7 +143,7 @@ export class CityView {
     return layout.buildings.map((building, i) => {
       if (i === this.selected) return SELECTED.clone();
       if (i === this.hovered) return HOVERED.clone();
-      const color = fileColor(building.file, this.mode, maxCommits);
+      const color = fileColor(building.file, this.mode, scale);
       return related && !related.has(i) ? color.multiplyScalar(DIMMED) : color;
     });
   }

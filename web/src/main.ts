@@ -99,7 +99,10 @@ async function loadFile(file: File): Promise<void> {
 }
 
 async function start(): Promise<void> {
-  const response = await fetch(`${import.meta.env.BASE_URL}cities/index.json`);
+  // no-cache: after a redeploy the list must not come from a stale cache.
+  const response = await fetch(`${import.meta.env.BASE_URL}cities/index.json`, {
+    cache: "no-cache",
+  });
   const entries = (await response.json()) as CityEntry[];
   for (const entry of entries) {
     select.append(new Option(`${entry.name} · ${entry.note}`, entry.name));
