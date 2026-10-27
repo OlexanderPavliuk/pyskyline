@@ -47,7 +47,7 @@ def inspect(
     ],
 ) -> None:
     """Show line counts and complexity for one Python file."""
-    console = Console()
+    console = _console()
     metrics = analyze_file(path)
     if metrics.error is not None:
         console.print(f"[red]{path}: {metrics.error}[/red]")
@@ -105,7 +105,7 @@ def analyze(
     ] = None,
 ) -> None:
     """Analyze every Python file in a project and write the city JSON."""
-    console = Console()
+    console = _console()
     if is_remote(source):
         console.print(f"cloning {source}")
         try:
@@ -168,3 +168,9 @@ def _complexity_cell(complexity: int) -> str:
     if complexity > 5:
         return f"[yellow]{complexity}[/yellow]"
     return str(complexity)
+
+
+def _console() -> Console:
+    # soft_wrap: long paths and error messages stay on one line instead of being
+    # broken at the terminal width, which also keeps them greppable when piped.
+    return Console(soft_wrap=True)
