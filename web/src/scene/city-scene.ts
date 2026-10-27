@@ -5,6 +5,8 @@ import {
   Fog,
   HemisphereLight,
   InstancedMesh,
+  type LineBasicMaterial,
+  type LineSegments,
   Matrix4,
   Mesh,
   MeshStandardMaterial,
@@ -12,19 +14,25 @@ import {
   PerspectiveCamera,
   PlaneGeometry,
   Quaternion,
+  Raycaster,
   Scene,
+  Vector2,
   Vector3,
   WebGLRenderer,
 } from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 
 import type { Building, CityLayout } from "../layout/city";
+import { buildBridges } from "./bridges";
 
 /** Thickness of one district level; nested folders stack like terraces. */
 export const SLAB = 1.2;
 const BACKGROUND = new Color("#0e0e10");
 const DISTRICT_LOW = new Color("#18181c");
 const DISTRICT_HIGH = new Color("#2c2c33");
+export const IMPORT_COLOR = new Color("#f4f4f6");
+export const IMPORTED_BY_COLOR = new Color("#ff8a6b");
+const FLIGHT_MS = 700;
 
 export class CityScene {
   readonly renderer: WebGLRenderer;
@@ -35,6 +43,16 @@ export class CityScene {
   private readonly box = new BoxGeometry(1, 1, 1).translate(0, 0.5, 0);
   private cityMeshes: InstancedMesh[] = [];
   private readonly disposables: Mesh[] = [];
+  private readonly bridges: LineSegments[] = [];
+  private readonly raycaster = new Raycaster();
+  private readonly pointer = new Vector2();
+  private flight: {
+    start: number;
+    fromPosition: Vector3;
+    fromTarget: Vector3;
+    toPosition: Vector3;
+    toTarget: Vector3;
+  } | null = null;
   buildingMesh: InstancedMesh | null = null;
   layout: CityLayout | null = null;
 
@@ -59,10 +77,89 @@ export class CityScene {
 
     new ResizeObserver(() => this.resize()).observe(container);
     this.resize();
-    this.renderer.setAnimationLoop(() => {
+    this.renderer.setAnimationLoop((time) => {
+      this.advanceFlight(time);
       this.controls.update();
       this.renderer.render(this.scene, this.camera);
     });
+  }
+
+  /** Index of the building under a screen point, or null. */
+  pick(clientX: number, clientY: number): number | null {
+    if (!this.buildingMesh) return null;
+    const bounds = this.renderer.domElement.getBoundingClientRect();
+    this.pointer.set(
+      ((clientX - bounds.left) / bounds.width) * 2 - 1,
+      -((clientY - bounds.top) / bounds.height) * 2 + 1,
+    );
+    this.raycaster.setFromCamera(this.pointer, this.camera);
+    const [hit] = this.raycaster.intersectObject(this.buildingMesh, false);
+    return hit?.instanceId ?? null;
+  }
+
+  /** Center of a building's roof in world space. */
+  rooftop(index: number): Vector3 {
+    const { base, size } = this.buildingBox(index);
+    return base.setY(base.y + size.y);
+  }
+
+  /** Bottom center and dimensions of a building. */
+  private buildingBox(index: number): { base: Vector3; size: Vector3 } {
+    const matrix = new Matrix4();
+    this.buildingMesh?.getMatrixAt(index, matrix);
+    const base = new Vector3();
+    const size = new Vector3();
+    matrix.decompose(base, new Quaternion(), size);
+    return { base, size };
+  }
+
+  showBridges(from: number, imports: readonly number[], importedBy: readonly number[]): void {
+    this.clearBridges();
+    const start = this.rooftop(from);
+    for (const [targets, color] of [
+      [imports, IMPORT_COLOR],
+      [importedBy, IMPORTED_BY_COLOR],
+    ] as const) {
+      if (targets.length === 0) continue;
+      const lines = buildBridges(start, targets.map((i) => this.rooftop(i)), color);
+      this.scene.add(lines);
+      this.bridges.push(lines);
+    }
+  }
+
+  clearBridges(): void {
+    for (const lines of this.bridges.splice(0)) {
+      this.scene.remove(lines);
+      lines.geometry.dispose();
+      (lines.material as LineBasicMaterial).dispose();
+    }
+  }
+
+  /** Smoothly moves the camera to look at a building from the current direction. */
+  flyTo(index: number): void {
+    const { base, size } = this.buildingBox(index);
+    const target = base.clone().setY(base.y + size.y * 0.5);
+    const direction = this.camera.position.clone().sub(this.controls.target).normalize();
+    // Far enough to see the whole building plus some of its neighborhood.
+    const extent = Math.max(size.x, size.y, size.z);
+    const distance = extent * 2.4 + (this.layout?.size ?? 100) * 0.08;
+    this.flight = {
+      start: performance.now(),
+      fromPosition: this.camera.position.clone(),
+      fromTarget: this.controls.target.clone(),
+      toPosition: target.clone().addScaledVector(direction, distance),
+      toTarget: target,
+    };
+  }
+
+  private advanceFlight(time: number): void {
+    const flight = this.flight;
+    if (!flight) return;
+    const t = Math.min((time - flight.start) / FLIGHT_MS, 1);
+    const eased = 1 - (1 - t) ** 3;
+    this.camera.position.lerpVectors(flight.fromPosition, flight.toPosition, eased);
+    this.controls.target.lerpVectors(flight.fromTarget, flight.toTarget, eased);
+    if (t === 1) this.flight = null;
   }
 
   setCity(layout: CityLayout, heights: readonly number[], colors: readonly Color[]): void {
@@ -134,6 +231,8 @@ export class CityScene {
   }
 
   private clear(): void {
+    this.clearBridges();
+    this.flight = null;
     for (const mesh of this.cityMeshes) {
       this.scene.remove(mesh);
       (mesh.material as MeshStandardMaterial).dispose();

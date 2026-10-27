@@ -35,13 +35,36 @@
 
       <p class="mt-4 text-[11px] tracking-wider text-mute uppercase">Color</p>
       <div id="color-modes" class="mt-1 grid grid-cols-3 gap-1" role="radiogroup"></div>
+
+      <label class="mt-4 block text-[11px] tracking-wider text-mute uppercase" for="search">Find a file</label>
+      <input
+        id="search"
+        class="control mt-1 w-full font-mono"
+        list="file-paths"
+        placeholder="path/to/module.py"
+        autocomplete="off"
+        spellcheck="false"
+      />
+      <datalist id="file-paths"></datalist>
     </header>
 
-    <footer class="panel pointer-events-auto fixed bottom-4 left-4 w-[min(22rem,calc(100vw-2rem))] p-4 text-xs">
+    <aside
+      id="panel"
+      class="panel fixed right-4 bottom-4 left-4 hidden max-h-[45vh] overflow-y-auto p-4 md:top-4 md:left-auto md:max-h-none md:w-[22rem]"
+      aria-label="File details"
+    ></aside>
+
+    <div
+      id="tooltip"
+      class="panel pointer-events-none fixed top-0 left-0 hidden max-w-xs px-2.5 py-1.5 font-mono text-xs"
+    ></div>
+
+    <footer id="legend" class="panel pointer-events-auto fixed bottom-4 left-4 w-[min(22rem,calc(100vw-2rem))] p-4 text-xs">
       <div id="legend-bar" class="h-1.5 w-full rounded-full"></div>
       <div class="mt-1 flex justify-between text-mute"><span>low</span><span>high</span></div>
       <p id="legend-text" class="mt-2 text-fog"></p>
       <p class="mt-1 text-mute">Footprint: lines of code. Height: total complexity.</p>
+      <p class="mt-1 text-mute max-md:hidden">Drag to orbit, scroll to zoom, click a building.</p>
     </footer>
 
     <div id="toast" class="panel fixed top-4 left-1/2 hidden -translate-x-1/2 px-4 py-2 text-sm text-white"></div>
